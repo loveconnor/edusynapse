@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   return (
     <div className="w-full sm:h-screen lg:grid lg:grid-cols-2">
-      <div className="mx-auto h-full w-full max-w-sm space-y-6 px-4 py-4 sm:px-0 lg:py-20">
+      <div className="mx-auto h-full w-full max-w-md space-y-6 px-4 py-4 sm:px-0 lg:py-20">
         <div className="flex h-full flex-col justify-center space-y-6">
           {step === "email" ? (
             <>
