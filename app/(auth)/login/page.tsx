@@ -1,44 +1,71 @@
 "use client";
 
 import { GrainGradient } from "@paper-design/shaders-react";
-import { GoogleIcon } from "love-ui/logos";
 import { useReducedMotion } from "motion/react";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { authenticatePreviewEmail } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OTPInput, type OTPStatus } from "@/components/motion/otp-input";
-import { Separator } from "@/components/ui/separator";
 
 const CODE = "123456";
 
 export default function LoginPage() {
+  const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [otpValue, setOtpValue] = useState("");
   const [otpStatus, setOtpStatus] = useState<OTPStatus>("idle");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   function showOtpStep(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setOtpValue("");
     setOtpStatus("idle");
+    setAuthError(null);
     setStep("otp");
   }
 
   function showEmailStep() {
     setOtpValue("");
     setOtpStatus("idle");
+    setAuthError(null);
     setStep("email");
   }
 
+  async function verifyPreviewCode(value: string) {
+    setIsVerifying(true);
+    setAuthError(null);
+    const result = await authenticatePreviewEmail(email, value);
+
+    if (!result.ok) {
+      setOtpStatus("error");
+      setAuthError(result.message);
+      setIsVerifying(false);
+      return;
+    }
+
+    setOtpStatus("success");
+    router.replace("/onboarding");
+  }
+
   return (
-    <div className="w-full sm:h-screen lg:grid lg:grid-cols-2">
-      <div className="mx-auto h-full w-full max-w-md space-y-6 px-4 py-4 sm:px-0 lg:py-20">
-        <div className="flex h-full flex-col justify-center space-y-6">
+    <div className="min-h-svh w-full lg:grid lg:h-screen lg:grid-cols-2">
+      <div className="flex min-h-svh flex-col px-4 sm:px-8 lg:min-h-0">
+        <header className="flex h-20 shrink-0 items-center justify-center sm:h-24">
+          <span className="text-lg font-semibold tracking-tight">
+            EduSynapse
+          </span>
+        </header>
+
+        <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center space-y-6 py-8">
           {step === "email" ? (
             <>
-              <h1 className="text-3xl font-bold">Sign in to your account</h1>
+              <h1 className="text-3xl font-bold">Sign in or create an account</h1>
 
               <form className="space-y-6" onSubmit={showOtpStep}>
                 <div className="space-y-2">
@@ -51,33 +78,16 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
+                    size="lg"
                     className="mt-1"
                   />
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="submit" size="xl" className="w-full">
                   Continue with email
                 </Button>
               </form>
 
-              <div className="space-y-6">
-                <div className="relative flex items-center gap-2">
-                  <Separator className="flex-1" />
-                  <span className="text-muted-foreground shrink-0 text-sm">
-                    or
-                  </span>
-                  <Separator className="flex-1" />
-                </div>
-
-                <Button variant="outline" className="relative w-full">
-                  <GoogleIcon
-                    className="absolute start-4 size-5"
-                    aria-hidden="true"
-                    focusable="false"
-                  />
-                  Continue with Google
-                </Button>
-              </div>
             </>
           ) : (
             <div className="space-y-6">
@@ -93,18 +103,24 @@ export default function LoginPage() {
                 label="Verification code"
                 hint={`Enter ${CODE} to verify.`}
                 successMessage="Verified."
-                errorMessage="Wrong code, try again."
+                errorMessage={authError ?? "Enter the preview code 123456."}
                 value={otpValue}
                 status={otpStatus}
+                disabled={isVerifying}
                 autoFocus
                 onChange={(value) => {
                   setOtpValue(value);
+                  setAuthError(null);
                   if (otpStatus !== "idle") setOtpStatus("idle");
                 }}
-                onComplete={(value) =>
-                  setOtpStatus(value === CODE ? "success" : "error")
-                }
+                onComplete={(value) => void verifyPreviewCode(value)}
               />
+
+              {isVerifying ? (
+                <p className="text-sm text-muted-foreground" role="status">
+                  Starting your session…
+                </p>
+              ) : null}
 
               <Button
                 type="button"
@@ -116,7 +132,27 @@ export default function LoginPage() {
               </Button>
             </div>
           )}
-        </div>
+        </main>
+
+        <footer className="flex min-h-20 shrink-0 items-center justify-center py-5">
+          <p className="text-muted-foreground text-center text-sm sm:whitespace-nowrap">
+            By clicking continue, you agree to our{" "}
+            <a
+              href="#"
+              className="text-foreground rounded-sm underline underline-offset-4 transition-opacity hover:opacity-70"
+            >
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href="#"
+              className="text-foreground rounded-sm underline underline-offset-4 transition-opacity hover:opacity-70"
+            >
+              Privacy Policy
+            </a>
+            {"."}
+          </p>
+        </footer>
       </div>
 
       <div
