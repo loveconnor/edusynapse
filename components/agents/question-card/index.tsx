@@ -4,11 +4,11 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  CircleHelp,
+  CircleQuestionMark,
   LoaderCircle,
   MessageSquareText,
   X,
-} from "lucide-react";
+} from "love-ui/icons";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentDisclosure } from "@/components/agents/agent-disclosure";
@@ -302,7 +302,7 @@ export function QuestionCard({
             <LoaderCircle className={cn("size-4", !reduce && "animate-spin")} />
           ) : interactive ? (
             questionMode ? (
-              <CircleHelp className="size-4" />
+              <CircleQuestionMark className="size-4" />
             ) : (
               <MessageSquareText className="size-4" />
             )

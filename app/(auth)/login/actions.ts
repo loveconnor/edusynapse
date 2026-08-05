@@ -1,17 +1,34 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import {
-  isValidLoginEmail,
-  normalizeLoginEmail,
-  type VerifiedAccountStatus,
-} from "@/lib/login-email";
+import { isValidLoginEmail, normalizeLoginEmail } from "@/lib/login-email";
 
 const PREVIEW_OTP = "123456";
 
 type AuthenticationResult =
-  | { ok: true; accountStatus: VerifiedAccountStatus }
+  | { ok: true }
   | { ok: false; message: string; codeIsInvalid?: boolean };
+
+type EmailAccountLookupResult =
+  | { ok: true; exists: boolean }
+  | { ok: false };
+
+export async function checkEmailAccount(
+  email: string,
+): Promise<EmailAccountLookupResult> {
+  const normalizedEmail = normalizeLoginEmail(email);
+
+  if (!isValidLoginEmail(normalizedEmail)) return { ok: false };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("email_account_exists", {
+    candidate_email: normalizedEmail,
+  });
+
+  if (error || typeof data !== "boolean") return { ok: false };
+
+  return { ok: true, exists: data };
+}
 
 export async function authenticatePreviewEmail(
   email: string,
@@ -34,7 +51,7 @@ export async function authenticatePreviewEmail(
   });
 
   if (!signIn.error && signIn.data.session) {
-    return { ok: true, accountStatus: "existing" };
+    return { ok: true };
   }
 
   const signUp = await supabase.auth.signUp({
@@ -49,5 +66,5 @@ export async function authenticatePreviewEmail(
     };
   }
 
-  return { ok: true, accountStatus: "created" };
+  return { ok: true };
 }

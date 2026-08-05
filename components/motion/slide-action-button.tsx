@@ -1,5 +1,4 @@
 "use client";
-// beui.dev/components/motion/expanding-arrow-button
 
 import {
   animate,

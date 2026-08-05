@@ -69,7 +69,13 @@ function AttachSubmitButton({ disabled }: { disabled: boolean }) {
 const textareaClassName =
   "min-h-32 w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm leading-6 outline-none transition-shadow placeholder:text-muted-foreground/64 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/24 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/16";
 
-export function NewLearningForm() {
+export function NewLearningForm({
+  defaultTitle = "",
+  onCancel,
+}: {
+  defaultTitle?: string;
+  onCancel?: () => void;
+}) {
   const [state, action] = useActionState(
     createLearningItem,
     initialLearningActionState,
@@ -80,14 +86,15 @@ export function NewLearningForm() {
       <FormMessage message={state.message} />
 
       <div className="space-y-2">
-        <Label htmlFor="title">Topic or course title</Label>
+        <Label htmlFor="new-learning-title">Topic or course title</Label>
         <Input
-          id="title"
+          id="new-learning-title"
           name="title"
           required
           maxLength={200}
           size="lg"
           autoComplete="off"
+          defaultValue={defaultTitle}
           placeholder="For example, React Fundamentals"
           aria-invalid={Boolean(state.fieldErrors?.title)}
           aria-describedby={state.fieldErrors?.title ? "title-error" : undefined}
@@ -96,9 +103,11 @@ export function NewLearningForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="currentLesson">Current lesson (optional)</Label>
+        <Label htmlFor="new-learning-current-lesson">
+          Current lesson (optional)
+        </Label>
         <Input
-          id="currentLesson"
+          id="new-learning-current-lesson"
           name="currentLesson"
           maxLength={200}
           size="lg"
@@ -116,9 +125,9 @@ export function NewLearningForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="notes">Notes (optional)</Label>
+        <Label htmlFor="new-learning-notes">Notes (optional)</Label>
         <textarea
-          id="notes"
+          id="new-learning-notes"
           name="notes"
           maxLength={10000}
           className={textareaClassName}
@@ -130,9 +139,9 @@ export function NewLearningForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="files">PDFs (optional)</Label>
+        <Label htmlFor="new-learning-files">PDFs (optional)</Label>
         <Input
-          id="files"
+          id="new-learning-files"
           name="files"
           type="file"
           accept="application/pdf,.pdf"
@@ -151,6 +160,11 @@ export function NewLearningForm() {
 
       <div className="flex flex-wrap items-center gap-3 border-t border-border pt-6">
         <SubmitButton>Create learning item</SubmitButton>
+        {onCancel ? (
+          <Button type="button" variant="outline" size="lg" onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : null}
         <p className="text-sm text-muted-foreground">
           New items start at 0% until you update your progress.
         </p>

@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, FileText } from "lucide-react";
-import { notFound, redirect } from "next/navigation";
-import { LearningHeader } from "@/components/learning/learning-header";
+import { ArrowLeft, ExternalLink, FileText } from "love-ui/icons";
+import { notFound } from "next/navigation";
 import {
   AddMaterialsForm,
   UpdateLearningForm,
 } from "@/components/learning/learning-forms";
 import { LearningProgress } from "@/components/learning/learning-progress";
+import { getAppPageContext } from "@/lib/app-page-context";
 import { getLearningStatus } from "@/lib/learning";
-import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Learning item | EduSynapse",
@@ -24,15 +23,9 @@ export default async function LearningItemPage({
 }) {
   const { id } = await params;
   const query = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAppPageContext();
 
-  if (!user?.email) redirect("/login");
-
-  const [{ data: profile }, itemResult, materialsResult] = await Promise.all([
-    supabase.from("profiles").select("name").eq("id", user.id).maybeSingle(),
+  const [itemResult, materialsResult] = await Promise.all([
     supabase
       .from("learning_items")
       .select("id, title, notes, progress, current_lesson")
@@ -64,9 +57,7 @@ export default async function LearningItemPage({
   const status = getLearningStatus(item.progress);
 
   return (
-    <div className="min-h-svh bg-background text-foreground">
-      <LearningHeader name={profile?.name?.trim() || null} email={user.email} />
-      <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+      <main className="mx-auto w-full max-w-5xl py-4 md:py-8">
         <Link
           href="/dashboard"
           className="inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -177,6 +168,5 @@ export default async function LearningItemPage({
           </aside>
         </div>
       </main>
-    </div>
   );
 }

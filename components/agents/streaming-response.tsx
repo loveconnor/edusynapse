@@ -1,5 +1,4 @@
 "use client";
-// beui.dev/components/agents/streaming-response
 
 import {
   Check,
@@ -8,7 +7,7 @@ import {
   RotateCcw,
   ThumbsDown,
   ThumbsUp,
-} from "lucide-react";
+} from "love-ui/icons";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   type ReactNode,

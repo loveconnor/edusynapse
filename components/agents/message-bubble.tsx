@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "love-ui/icons";
 import {
   type HTMLMotionProps,
   motion,

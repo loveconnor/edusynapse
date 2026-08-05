@@ -1,5 +1,4 @@
 "use client";
-// beui.dev/components/agents/message-scroller
 
 import { useReducedMotion } from "motion/react";
 import {

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenText, ChevronDown, ExternalLink, Globe2 } from "lucide-react";
+import { BookOpenText, ChevronDown, ExternalLink, Globe } from "love-ui/icons";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   type ReactNode,
@@ -104,7 +104,7 @@ export function CitationFavicon({
           className="size-4 rounded-sm object-contain"
         />
       ) : (
-        <Globe2 className="size-3.5" />
+        <Globe className="size-3.5" />
       )}
     </span>
   );

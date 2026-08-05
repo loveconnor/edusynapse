@@ -1,6 +1,6 @@
 "use client";
 
-import { Paperclip, RotateCcw, X } from "lucide-react";
+import { Paperclip, RotateCcw, X } from "love-ui/icons";
 import { useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";

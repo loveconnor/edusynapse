@@ -1,5 +1,4 @@
 "use client";
-// beui.dev/components/agents/loading-states
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";

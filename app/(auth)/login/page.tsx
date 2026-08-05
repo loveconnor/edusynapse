@@ -4,47 +4,97 @@ import { GrainGradient } from "@paper-design/shaders-react";
 import { useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { authenticatePreviewEmail } from "./actions";
+import { authenticatePreviewEmail, checkEmailAccount } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OTPInput, type OTPStatus } from "@/components/motion/otp-input";
-import type { VerifiedAccountStatus } from "@/lib/login-email";
+import { isValidLoginEmail, normalizeLoginEmail } from "@/lib/login-email";
 
 const CODE = "123456";
 
-const VERIFIED_MESSAGE = {
+const EMAIL_MESSAGE = {
+  neutral: {
+    heading: "Sign in or create an account",
+    description: "Enter your email address to continue.",
+  },
   existing: {
     heading: "Welcome back",
-    description: "You’re signed in. Let’s pick up where you left off.",
+    description: "Good to see you again. Let’s pick up where you left off.",
   },
-  created: {
-    heading: "Welcome to EduSynapse",
-    description: "Your account is ready. Let’s get you set up.",
+  new: {
+    heading: "Create your account",
+    description: "Welcome to EduSynapse. Let’s get you set up.",
+  },
+  unavailable: {
+    heading: "Sign in or create an account",
+    description: "We couldn’t check this email. You can still continue.",
   },
 } as const;
+
+type EmailAccountLookup = {
+  email: string;
+  status: "checking" | "existing" | "new" | "unavailable";
+};
 
 export default function LoginPage() {
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
-  const [step, setStep] = useState<"email" | "otp" | "verified">("email");
+  const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [otpValue, setOtpValue] = useState("");
   const [otpStatus, setOtpStatus] = useState<OTPStatus>("idle");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verifiedAccountStatus, setVerifiedAccountStatus] =
-    useState<VerifiedAccountStatus | null>(null);
+  const [emailAccountLookup, setEmailAccountLookup] =
+    useState<EmailAccountLookup | null>(null);
+
+  const normalizedEmail = normalizeLoginEmail(email);
+  const currentLookupStatus =
+    emailAccountLookup?.email === normalizedEmail
+      ? emailAccountLookup.status
+      : null;
+  const emailMessage =
+    currentLookupStatus === "existing" ||
+    currentLookupStatus === "new" ||
+    currentLookupStatus === "unavailable"
+      ? EMAIL_MESSAGE[currentLookupStatus]
+      : EMAIL_MESSAGE.neutral;
+  const submitLabel =
+    currentLookupStatus === "existing"
+      ? "Continue to sign in"
+      : currentLookupStatus === "new"
+        ? "Continue to create account"
+        : "Continue with email";
 
   useEffect(() => {
-    if (step !== "verified") return;
+    if (step !== "email" || !isValidLoginEmail(email)) return;
 
-    const redirectTimer = window.setTimeout(() => {
-      router.replace("/onboarding");
-    }, 1200);
+    const lookupEmail = normalizeLoginEmail(email);
+    let isCancelled = false;
 
-    return () => window.clearTimeout(redirectTimer);
-  }, [router, step]);
+    const lookupTimer = window.setTimeout(() => {
+      setEmailAccountLookup({ email: lookupEmail, status: "checking" });
+
+      void checkEmailAccount(lookupEmail).then((result) => {
+        if (isCancelled) return;
+
+        setEmailAccountLookup({
+          email: lookupEmail,
+          status: result.ok
+            ? result.exists
+              ? "existing"
+              : "new"
+            : "unavailable",
+        });
+      });
+    }, 200);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(lookupTimer);
+    };
+  }, [email, step]);
 
   function showOtpStep(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,7 +108,6 @@ export default function LoginPage() {
     setOtpValue("");
     setOtpStatus("idle");
     setAuthError(null);
-    setVerifiedAccountStatus(null);
     setStep("email");
   }
 
@@ -76,9 +125,7 @@ export default function LoginPage() {
 
     setOtpStatus("success");
     setIsVerifying(false);
-
-    setVerifiedAccountStatus(result.accountStatus);
-    setStep("verified");
+    router.replace("/onboarding");
   }
 
   return (
@@ -93,12 +140,15 @@ export default function LoginPage() {
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center space-y-6 py-8">
           {step === "email" ? (
             <>
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold">
-                  Sign in or create an account
-                </h1>
+              <div
+                className="space-y-2"
+                aria-live="polite"
+                aria-atomic="true"
+                aria-busy={currentLookupStatus === "checking"}
+              >
+                <h1 className="text-3xl font-bold">{emailMessage.heading}</h1>
                 <p id="email-guidance" className="text-sm text-muted-foreground">
-                  Enter your email address to continue.
+                  {emailMessage.description}
                 </p>
               </div>
 
@@ -113,18 +163,21 @@ export default function LoginPage() {
                     aria-describedby="email-guidance"
                     required
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      setEmailAccountLookup(null);
+                    }}
                     size="lg"
                     className="mt-1"
                   />
                 </div>
 
                 <Button type="submit" size="xl" className="w-full">
-                  Continue with email
+                  {submitLabel}
                 </Button>
               </form>
             </>
-          ) : step === "otp" ? (
+          ) : (
             <div className="space-y-6">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold">Enter your verification code</h1>
@@ -166,21 +219,7 @@ export default function LoginPage() {
                 Use a different email
               </Button>
             </div>
-          ) : verifiedAccountStatus ? (
-            <div
-              className="space-y-2"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              <h1 className="text-3xl font-bold">
-                {VERIFIED_MESSAGE[verifiedAccountStatus].heading}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {VERIFIED_MESSAGE[verifiedAccountStatus].description}
-              </p>
-            </div>
-          ) : null}
+          )}
         </main>
 
         <footer className="flex min-h-20 shrink-0 items-center justify-center py-5">

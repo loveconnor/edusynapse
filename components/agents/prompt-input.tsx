@@ -1,7 +1,6 @@
 "use client";
-// beui.dev/components/agents/prompt-input
 
-import { ArrowUp, Plus, Square } from "lucide-react";
+import { ArrowUp, Plus, Square } from "love-ui/icons";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   type FormEvent,
