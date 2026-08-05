@@ -3,24 +3,48 @@
 import { GrainGradient } from "@paper-design/shaders-react";
 import { useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { authenticatePreviewEmail } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OTPInput, type OTPStatus } from "@/components/motion/otp-input";
+import type { VerifiedAccountStatus } from "@/lib/login-email";
 
 const CODE = "123456";
+
+const VERIFIED_MESSAGE = {
+  existing: {
+    heading: "Welcome back",
+    description: "You’re signed in. Let’s pick up where you left off.",
+  },
+  created: {
+    heading: "Welcome to EduSynapse",
+    description: "Your account is ready. Let’s get you set up.",
+  },
+} as const;
 
 export default function LoginPage() {
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
-  const [step, setStep] = useState<"email" | "otp">("email");
+  const [step, setStep] = useState<"email" | "otp" | "verified">("email");
   const [email, setEmail] = useState("");
   const [otpValue, setOtpValue] = useState("");
   const [otpStatus, setOtpStatus] = useState<OTPStatus>("idle");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [verifiedAccountStatus, setVerifiedAccountStatus] =
+    useState<VerifiedAccountStatus | null>(null);
+
+  useEffect(() => {
+    if (step !== "verified") return;
+
+    const redirectTimer = window.setTimeout(() => {
+      router.replace("/onboarding");
+    }, 1200);
+
+    return () => window.clearTimeout(redirectTimer);
+  }, [router, step]);
 
   function showOtpStep(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,6 +58,7 @@ export default function LoginPage() {
     setOtpValue("");
     setOtpStatus("idle");
     setAuthError(null);
+    setVerifiedAccountStatus(null);
     setStep("email");
   }
 
@@ -50,7 +75,10 @@ export default function LoginPage() {
     }
 
     setOtpStatus("success");
-    router.replace("/onboarding");
+    setIsVerifying(false);
+
+    setVerifiedAccountStatus(result.accountStatus);
+    setStep("verified");
   }
 
   return (
@@ -65,7 +93,14 @@ export default function LoginPage() {
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center space-y-6 py-8">
           {step === "email" ? (
             <>
-              <h1 className="text-3xl font-bold">Sign in or create an account</h1>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold">
+                  Sign in or create an account
+                </h1>
+                <p id="email-guidance" className="text-sm text-muted-foreground">
+                  Enter your email address to continue.
+                </p>
+              </div>
 
               <form className="space-y-6" onSubmit={showOtpStep}>
                 <div className="space-y-2">
@@ -75,6 +110,7 @@ export default function LoginPage() {
                     name="email"
                     type="email"
                     autoComplete="email"
+                    aria-describedby="email-guidance"
                     required
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
@@ -87,9 +123,8 @@ export default function LoginPage() {
                   Continue with email
                 </Button>
               </form>
-
             </>
-          ) : (
+          ) : step === "otp" ? (
             <div className="space-y-6">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold">Enter your verification code</h1>
@@ -131,7 +166,21 @@ export default function LoginPage() {
                 Use a different email
               </Button>
             </div>
-          )}
+          ) : verifiedAccountStatus ? (
+            <div
+              className="space-y-2"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <h1 className="text-3xl font-bold">
+                {VERIFIED_MESSAGE[verifiedAccountStatus].heading}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {VERIFIED_MESSAGE[verifiedAccountStatus].description}
+              </p>
+            </div>
+          ) : null}
         </main>
 
         <footer className="flex min-h-20 shrink-0 items-center justify-center py-5">

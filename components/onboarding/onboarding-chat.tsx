@@ -89,6 +89,7 @@ const GOAL_OPTIONS = [
 
 const TIME_OPTIONS = ["15 min", "30 min", "45 min", "1 hour", "2+ hours"];
 const MAX_ATTACHMENTS = 12;
+const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024;
 
 const EMPTY_ANSWERS: OnboardingAnswers = {
   name: "",
@@ -279,14 +280,31 @@ export function OnboardingChat() {
     });
   }
 
-  function addAttachments(files: File[]) {
+  async function addAttachments(files: File[]) {
     const availableSlots = Math.max(0, MAX_ATTACHMENTS - attachments.length);
-    const acceptedFiles = files.slice(0, availableSlots);
-    if (acceptedFiles.length < files.length) {
-      setAttachmentError(`You can attach up to ${MAX_ATTACHMENTS} files in this preview.`);
-    } else {
-      setAttachmentError(null);
+    const candidates = files.slice(0, availableSlots);
+    const acceptedFiles: File[] = [];
+    let validationError: string | null =
+      candidates.length < files.length
+        ? `You can attach up to ${MAX_ATTACHMENTS} PDFs.`
+        : null;
+
+    for (const file of candidates) {
+      if (file.size > MAX_ATTACHMENT_SIZE) {
+        validationError = "Each PDF must be 50 MB or smaller.";
+        continue;
+      }
+
+      const signature = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+      if (new TextDecoder().decode(signature) !== "%PDF-") {
+        validationError = "Attach PDF files only.";
+        continue;
+      }
+
+      acceptedFiles.push(file);
     }
+
+    setAttachmentError(validationError);
     setAttachments((current) => [
       ...current,
       ...acceptedFiles.map((file, index) => ({
@@ -315,17 +333,45 @@ export function OnboardingChat() {
         return;
       }
 
+      const proposedLearningItemId = crypto.randomUUID();
+      const { error: profileError } = await supabase.from("profiles").upsert({
+        id: user.id,
+        name: answers.name,
+        learning_focus: answers.focus,
+        learning_context: answers.context,
+        material_notes: answers.materialNotes || null,
+        goals: answers.goals,
+        daily_study_time: answers.time,
+      });
+
+      if (profileError) throw profileError;
+
+      const { data: learningItem, error: learningItemError } = await supabase
+        .from("learning_items")
+        .upsert(
+          {
+            id: proposedLearningItemId,
+            user_id: user.id,
+            title: answers.focus,
+            notes: answers.materialNotes || null,
+            origin: "onboarding",
+            origin_key: "profile",
+          },
+          { onConflict: "user_id,origin_key" },
+        )
+        .select("id")
+        .single();
+
+      if (learningItemError) throw learningItemError;
+
       const storedMaterials: StoredMaterial[] = [];
 
       for (const attachment of attachments) {
-        const safeName =
-          attachment.name.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(-120) ||
-          "file";
-        const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+        const path = `${user.id}/${learningItem.id}/${crypto.randomUUID()}.pdf`;
         const { error: uploadError } = await supabase.storage
           .from("learning-materials")
           .upload(path, attachment.file, {
-            contentType: attachment.file.type || undefined,
+            contentType: "application/pdf",
             upsert: false,
           });
 
@@ -336,28 +382,45 @@ export function OnboardingChat() {
           name: attachment.name,
           path,
           size: attachment.size,
-          type: attachment.file.type,
+          type: "application/pdf",
         });
       }
 
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        id: user.id,
-        name: answers.name,
-        learning_focus: answers.focus,
-        learning_context: answers.context,
-        material_notes: answers.materialNotes || null,
-        materials: storedMaterials,
-        goals: answers.goals,
-        daily_study_time: answers.time,
-        onboarding_completed_at: new Date().toISOString(),
-      });
+      if (storedMaterials.length > 0) {
+        const { error: materialsError } = await supabase
+          .from("learning_materials")
+          .insert(
+            storedMaterials.map((material) => ({
+              learning_item_id: learningItem.id,
+              user_id: user.id,
+              file_name: material.name,
+              storage_path: material.path,
+              file_size: material.size,
+              mime_type: material.type,
+            })),
+          );
 
-      if (profileError) throw profileError;
+        if (materialsError) throw materialsError;
+      }
+
+      const { error: completionError } = await supabase
+        .from("profiles")
+        .update({
+          materials: storedMaterials,
+          onboarding_completed_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (completionError) throw completionError;
 
       router.replace("/dashboard");
       router.refresh();
     } catch {
       if (uploadedPaths.length > 0) {
+        await supabase
+          .from("learning_materials")
+          .delete()
+          .in("storage_path", uploadedPaths);
         await supabase.storage.from("learning-materials").remove(uploadedPaths);
       }
       setSaveError("We couldn’t save your setup. Your answers are still here—try again.");
@@ -532,12 +595,15 @@ export function OnboardingChat() {
                 <input
                   ref={attachmentInputRef}
                   type="file"
+                  accept="application/pdf,.pdf"
                   multiple
                   tabIndex={-1}
                   className="sr-only"
                   aria-label="Attach learning materials"
                   onChange={(event) => {
-                    addAttachments(Array.from(event.currentTarget.files ?? []));
+                    void addAttachments(
+                      Array.from(event.currentTarget.files ?? []),
+                    );
                     event.currentTarget.value = "";
                   }}
                 />
@@ -595,8 +661,8 @@ export function OnboardingChat() {
                   actions={[
                     {
                       value: "attach-files",
-                      label: "Attach files",
-                      description: "Add up to 12 files from this device",
+                      label: "Attach PDFs",
+                      description: "Add up to 12 PDFs, up to 50 MB each",
                       icon: <Paperclip aria-hidden="true" />,
                     },
                   ]}

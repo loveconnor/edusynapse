@@ -1,27 +1,29 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  isValidLoginEmail,
+  normalizeLoginEmail,
+  type VerifiedAccountStatus,
+} from "@/lib/login-email";
 
 const PREVIEW_OTP = "123456";
 
 type AuthenticationResult =
-  | { ok: true }
+  | { ok: true; accountStatus: VerifiedAccountStatus }
   | { ok: false; message: string; codeIsInvalid?: boolean };
 
 export async function authenticatePreviewEmail(
   email: string,
   code: string,
 ): Promise<AuthenticationResult> {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeLoginEmail(email);
 
   if (code !== PREVIEW_OTP) {
     return { ok: false, message: "Enter the preview code 123456.", codeIsInvalid: true };
   }
 
-  if (
-    normalizedEmail.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
-  ) {
+  if (!isValidLoginEmail(normalizedEmail)) {
     return { ok: false, message: "Enter a valid email address." };
   }
 
@@ -31,7 +33,9 @@ export async function authenticatePreviewEmail(
     password: PREVIEW_OTP,
   });
 
-  if (!signIn.error && signIn.data.session) return { ok: true };
+  if (!signIn.error && signIn.data.session) {
+    return { ok: true, accountStatus: "existing" };
+  }
 
   const signUp = await supabase.auth.signUp({
     email: normalizedEmail,
@@ -45,5 +49,5 @@ export async function authenticatePreviewEmail(
     };
   }
 
-  return { ok: true };
+  return { ok: true, accountStatus: "created" };
 }
