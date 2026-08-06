@@ -10,6 +10,13 @@ export type LearningItemSummary = {
 
 export type LearningStatus = "not-started" | "in-progress" | "completed";
 
+export type LearningTopicSummary = {
+  id: string;
+  title: string;
+  status: string;
+  position: number;
+};
+
 export type LearningActionState = {
   message: string | null;
   fieldErrors?: Partial<
@@ -68,6 +75,34 @@ export function selectRecommendationItem(items: LearningItemSummary[]) {
       if (activityDifference !== 0) return activityDifference;
 
       return left.created_at.localeCompare(right.created_at);
+    })[0] ?? null
+  );
+}
+
+const TOPIC_STATUS_PRIORITY: Record<string, number> = {
+  in_progress: 0,
+  needs_review: 1,
+  available: 2,
+  completed: 3,
+};
+
+export function selectCurrentTopic(
+  topics: LearningTopicSummary[],
+  currentLesson: string | null,
+) {
+  const unlockedTopics = topics.filter((topic) => topic.status !== "locked");
+  const namedTopic = currentLesson
+    ? unlockedTopics.find((topic) => topic.title === currentLesson)
+    : undefined;
+
+  if (namedTopic) return namedTopic;
+
+  return (
+    [...unlockedTopics].sort((left, right) => {
+      const statusDifference =
+        (TOPIC_STATUS_PRIORITY[left.status] ?? Number.MAX_SAFE_INTEGER) -
+        (TOPIC_STATUS_PRIORITY[right.status] ?? Number.MAX_SAFE_INTEGER);
+      return statusDifference || left.position - right.position;
     })[0] ?? null
   );
 }

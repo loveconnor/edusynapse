@@ -172,7 +172,8 @@ function bubbleSurfaceClass(
     "pointer-events-none absolute inset-0 -z-10 rounded-[inherit]",
     align === "end" ? "origin-bottom-right" : "origin-bottom-left",
     variant === "solid" && "bg-foreground",
-    variant === "soft" && "bg-muted",
+    variant === "soft" &&
+      "bg-background shadow-xs ring-1 ring-border/80 dark:bg-muted dark:shadow-none dark:ring-0",
     variant === "tint" && "bg-primary/10",
     variant === "outline" && "border border-border/70 bg-background",
     variant === "danger" && "bg-destructive/10",

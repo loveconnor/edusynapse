@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   getLearningStatus,
   selectContinueItem,
+  selectCurrentTopic,
   selectRecommendationItem,
   type LearningItemSummary,
 } from "./learning.ts";
@@ -63,4 +64,23 @@ test("completed learning produces no continue item or recommendation", () => {
 
   assert.equal(selectContinueItem(completed), null);
   assert.equal(selectRecommendationItem(completed), null);
+});
+
+test("current topic follows the saved lesson before status fallbacks", () => {
+  const topics = [
+    { id: "available", title: "Available topic", status: "available", position: 1 },
+    { id: "saved", title: "Saved topic", status: "completed", position: 2 },
+  ];
+
+  assert.equal(selectCurrentTopic(topics, "Saved topic")?.id, "saved");
+});
+
+test("current topic falls back to the most relevant unlocked topic", () => {
+  const topics = [
+    { id: "locked", title: "Locked topic", status: "locked", position: 1 },
+    { id: "available", title: "Available topic", status: "available", position: 2 },
+    { id: "active", title: "Active topic", status: "in_progress", position: 3 },
+  ];
+
+  assert.equal(selectCurrentTopic(topics, null)?.id, "active");
 });

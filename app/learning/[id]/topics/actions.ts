@@ -197,6 +197,7 @@ export async function completeLearningActivity(formData: FormData) {
   }
 
   await updatePathProgress({ itemId, topicId, userId: user.id });
+  revalidatePath("/dashboard");
   revalidatePath(`/learning/${itemId}`);
   revalidatePath(`/learning/${itemId}/topics/${topicId}`);
   redirect(`/learning/${itemId}/topics/${topicId}?activity=completed`);
@@ -262,6 +263,7 @@ export async function submitKnowledgeCheck(formData: FormData) {
   }
 
   await updatePathProgress({ itemId, topicId, userId: user.id });
+  revalidatePath("/dashboard");
   revalidatePath(`/learning/${itemId}`);
   revalidatePath(`/learning/${itemId}/topics/${topicId}`);
   redirect(

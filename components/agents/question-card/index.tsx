@@ -295,7 +295,7 @@ export function QuestionCard({
       data-state={status}
       aria-busy={busy}
       className={cn(
-        "w-full overflow-hidden rounded-2xl bg-muted p-4 text-sm",
+        "w-full overflow-hidden rounded-2xl bg-background p-4 text-sm shadow-xs ring-1 ring-border/80 dark:bg-muted dark:shadow-none dark:ring-0",
         className,
       )}
     >
