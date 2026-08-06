@@ -1,5 +1,5 @@
-import { LearningLoading } from "@/components/learning/learning-loading";
+import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 
 export default function DashboardLoading() {
-  return <LearningLoading />;
+  return <DashboardSkeleton />;
 }

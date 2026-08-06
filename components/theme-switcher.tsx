@@ -12,12 +12,12 @@ type ViewTransitionDocument = Document & {
 };
 
 export function ThemeSwitcher() {
-	const { setTheme, resolvedTheme } = useTheme();
+	const { setTheme } = useTheme();
 	const prefersReducedMotion = useReducedMotion() ?? false;
-	const isDark = resolvedTheme === "dark";
 
 	const toggleTheme = React.useCallback(
 		(event: React.MouseEvent<HTMLButtonElement>) => {
+			const isDark = document.documentElement.classList.contains("dark");
 			const nextTheme = isDark ? "light" : "dark";
 			const root = document.documentElement;
 			const applyTheme = () => {
@@ -54,7 +54,7 @@ export function ThemeSwitcher() {
 				applyTheme();
 			}
 		},
-		[isDark, prefersReducedMotion, setTheme],
+		[prefersReducedMotion, setTheme],
 	);
 
 	return (
@@ -62,7 +62,7 @@ export function ThemeSwitcher() {
 			className="text-muted-foreground"
 			onClick={toggleTheme}
 			size="icon-sm"
-			title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+			title="Switch color theme"
 			variant="ghost"
 		>
 			<svg
@@ -86,9 +86,7 @@ export function ThemeSwitcher() {
 				<path d="M12 14.3l7.37 -7.37" />
 				<path d="M12 19.6l8.85 -8.85" />
 			</svg>
-			<span className="sr-only">
-				{isDark ? "Switch to light theme" : "Switch to dark theme"}
-			</span>
+			<span className="sr-only">Switch color theme</span>
 		</Button>
 	);
 }

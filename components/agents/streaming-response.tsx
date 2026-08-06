@@ -80,7 +80,7 @@ function ResponseAction({
       transition={SPRING_PRESS}
       className={cn(
         "grid size-7 place-items-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-        active && "bg-muted text-foreground",
+        active && "text-foreground [&_svg]:fill-current",
       )}
     >
       {children}

@@ -10,7 +10,6 @@ export type SidebarNavItem = {
   title: string;
   path?: string;
   icon: ReactNode;
-  isActive?: boolean;
   isDisabled?: boolean;
 };
 
@@ -27,12 +26,11 @@ export const navGroups: SidebarNavGroup[] = [
         title: "My Learning",
         path: "/dashboard",
         icon: <BookOpen aria-hidden="true" />,
-        isActive: true,
       },
       {
         title: "AI Coach",
+        path: "/ai-coach",
         icon: <BotMessageSquare aria-hidden="true" />,
-        isDisabled: true,
       },
     ],
   },

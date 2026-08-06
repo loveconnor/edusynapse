@@ -25,7 +25,11 @@ export const getAppPageContext = cache(async () => {
   if (!user?.email) redirect("/login");
 
   const [profileResult, learningItemsResult, materialsResult] = await Promise.all([
-    supabase.from("profiles").select("name").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("name, daily_study_time")
+      .eq("id", user.id)
+      .maybeSingle(),
     supabase
       .from("learning_items")
       .select(
@@ -51,6 +55,9 @@ export const getAppPageContext = cache(async () => {
   return {
     supabase,
     user,
+    profile: {
+      dailyStudyTime: profileResult.data?.daily_study_time ?? null,
+    },
     shellProps: {
       commandPaletteData: {
         learningItems: learningItemsResult.data ?? [],

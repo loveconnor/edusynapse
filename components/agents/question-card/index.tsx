@@ -86,7 +86,7 @@ function QuestionOptions({
   answer: QuestionCardAnswer;
   disabled: boolean;
   onChange: (answer: QuestionCardAnswer) => void;
-  onSingleSelect?: () => void;
+  onSingleSelect?: (answer: QuestionCardAnswer) => void;
 }) {
   const custom = answer.custom ?? "";
 
@@ -117,8 +117,9 @@ function QuestionOptions({
           <RadioGroup
             value={answer.selected[0] ?? ""}
             onValueChange={(value) => {
-              onChange({ selected: [value], custom: "" });
-              onSingleSelect?.();
+              const nextAnswer = { selected: [value], custom: "" };
+              onChange(nextAnswer);
+              onSingleSelect?.(nextAnswer);
             }}
             className="gap-0.5"
           >
@@ -197,6 +198,7 @@ export function QuestionCard({
   defaultStep = 0,
   onStepChange,
   onSubmit,
+  autoSubmit = false,
   onApprove,
   onReject,
   onRequestChanges,
@@ -264,20 +266,27 @@ export function QuestionCard({
     onSubmit?.(currentAnswers);
   };
 
-  const queueAutoAdvance = () => {
+  const queueAutoAdvance = (nextAnswer: QuestionCardAnswer) => {
     if (
       !question ||
       question.multiple ||
       question.autoAdvance === false ||
-      currentStep >= questions.length - 1 ||
       busy
     ) {
       return;
     }
 
     clearAutoAdvance();
+    const nextAnswers = {
+      ...currentAnswers,
+      [question.id]: nextAnswer,
+    };
     autoAdvanceTimer.current = window.setTimeout(() => {
-      setStep(currentStep + 1);
+      if (currentStep < questions.length - 1) {
+        setStep(currentStep + 1);
+        return;
+      }
+      if (autoSubmit) onSubmit?.(nextAnswers);
     }, 240);
   };
 

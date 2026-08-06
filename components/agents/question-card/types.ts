@@ -45,6 +45,7 @@ export interface QuestionCardProps {
   defaultStep?: number;
   onStepChange?: (step: number) => void;
   onSubmit?: (answers: QuestionCardAnswers) => void;
+  autoSubmit?: boolean;
   onApprove?: () => void;
   onReject?: () => void;
   onRequestChanges?: () => void;

@@ -55,12 +55,6 @@ const soonBadge = (
   </span>
 );
 
-const aiSoonBadge = (
-  <span className="rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-    AI · Soon
-  </span>
-);
-
 function activityTime(item: LearningItemSummary) {
   return Date.parse(item.last_studied_at ?? item.updated_at);
 }
@@ -146,9 +140,21 @@ export function AppSearch({ learningItems, materials }: AppSearchData) {
     [],
   );
 
+  const openAiCoach = useCallback(
+    (draft?: string) => {
+      if (draft) sessionStorage.setItem("ai-coach-draft", draft);
+      navigate("/ai-coach");
+    },
+    [navigate],
+  );
+
   useKeypress({
     combo: ["meta+n", "ctrl+n"],
     callback: () => openNewLearningDialog(),
+  });
+  useKeypress({
+    combo: ["meta+/", "ctrl+/"],
+    callback: () => openAiCoach(),
   });
   useKeypress({
     combo: ["meta+u", "ctrl+u"],
@@ -211,13 +217,12 @@ export function AppSearch({ learningItems, materials }: AppSearchData) {
         {
           id: "chat-ai-coach",
           label: "Chat with AI Coach",
-          description: "AI Coach is not available yet",
+          description: "Get a personalized recommendation or ask a question",
           group: "Quick Actions",
           hint: "⌘/",
           keywords: ["ai", "chat", "ask", "coach"],
           icon: BotMessageSquare,
-          badge: soonBadge,
-          disabled: true,
+          onSelect: () => openAiCoach(),
         },
         {
           id: "upload-material",
@@ -251,8 +256,7 @@ export function AppSearch({ learningItems, materials }: AppSearchData) {
           label: "AI Coach",
           group: "Navigation",
           icon: BotMessageSquare,
-          badge: soonBadge,
-          disabled: true,
+          onSelect: () => openAiCoach(),
         },
         {
           id: "insights",
@@ -341,11 +345,10 @@ export function AppSearch({ learningItems, materials }: AppSearchData) {
           ...aiActions.map((label, index) => ({
             id: `ai-query-${index}`,
             label,
-            description: "Available when AI Coach launches",
+            description: "Open AI Coach with this prompt ready to send",
             group: "AI Actions",
             icon: Sparkles,
-            badge: aiSoonBadge,
-            disabled: true,
+            onSelect: () => openAiCoach(label),
           })),
         );
       }
@@ -358,6 +361,7 @@ export function AppSearch({ learningItems, materials }: AppSearchData) {
       learningItems,
       materials,
       navigate,
+      openAiCoach,
       openNewLearningDialog,
       recentItems,
     ],

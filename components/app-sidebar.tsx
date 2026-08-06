@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,8 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Settings } from "love-ui/icons";
 
 export function AppSidebar({ learningItems, materials }: AppSearchData) {
+	const pathname = usePathname();
+
 	return (
 		<Sidebar
 			className={cn(
@@ -49,31 +52,38 @@ export function AppSidebar({ learningItems, materials }: AppSearchData) {
 							{group.label}
 						</SidebarGroupLabel>
 						<SidebarMenu>
-							{group.items.map((item) => (
-								<SidebarMenuItem key={item.title}>
-									{item.isDisabled || !item.path ? (
-										<SidebarMenuButton
-											aria-label={`${item.title} — Coming soon`}
-											disabled
-										>
-											{item.icon}
-											<span>{item.title}</span>
-											<span className="ml-auto text-[10px] font-normal text-muted-foreground">
-												Soon
-											</span>
-										</SidebarMenuButton>
-									) : (
-										<SidebarMenuButton
-											isActive={item.isActive}
-											render={<Link href={item.path} />}
-											tooltip={item.title}
-										>
-											{item.icon}
-											<span>{item.title}</span>
-										</SidebarMenuButton>
-									)}
-								</SidebarMenuItem>
-							))}
+							{group.items.map((item) => {
+								const isActive = item.path
+									? pathname === item.path ||
+										pathname.startsWith(`${item.path}/`)
+									: false;
+
+								return (
+									<SidebarMenuItem key={item.title}>
+										{item.isDisabled || !item.path ? (
+											<SidebarMenuButton
+												aria-label={`${item.title} — Coming soon`}
+												disabled
+											>
+												{item.icon}
+												<span>{item.title}</span>
+												<span className="ml-auto text-[10px] font-normal text-muted-foreground">
+													Soon
+												</span>
+											</SidebarMenuButton>
+										) : (
+											<SidebarMenuButton
+												isActive={isActive}
+												render={<Link href={item.path} />}
+												tooltip={item.title}
+											>
+												{item.icon}
+												<span>{item.title}</span>
+											</SidebarMenuButton>
+										)}
+									</SidebarMenuItem>
+								);
+							})}
 						</SidebarMenu>
 					</SidebarGroup>
 				))}

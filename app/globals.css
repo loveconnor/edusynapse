@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "katex/dist/katex.min.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -153,5 +154,54 @@ html[data-theme-transition="circle-blur"]::view-transition-new(root) {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .prose
+    :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--primary);
+    text-decoration-color: color-mix(in oklab, var(--primary) 40%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  .prose
+    :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)):hover {
+    color: color-mix(in oklab, var(--primary) 80%, var(--foreground));
+  }
+
+  .prose
+    :where(:not(pre) > code):not(
+      :where([class~="not-prose"], [class~="not-prose"] *)
+    ) {
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: color-mix(in oklab, var(--muted) 82%, var(--background) 18%);
+    padding: 2px 7px;
+    font-size: 0.9em;
+  }
+
+  .prose
+    :where(:not(pre) > code):not(
+      :where([class~="not-prose"], [class~="not-prose"] *)
+    )::before,
+  .prose
+    :where(:not(pre) > code):not(
+      :where([class~="not-prose"], [class~="not-prose"] *)
+    )::after {
+    content: none;
+  }
+
+  .prose
+    :where(pre code):not(
+      :where([class~="not-prose"], [class~="not-prose"] *)
+    ) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
   }
 }

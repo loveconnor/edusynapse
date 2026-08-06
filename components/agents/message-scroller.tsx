@@ -6,6 +6,7 @@ import {
   type Ref,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
@@ -74,6 +75,8 @@ function getMessagePreview(
 }
 
 export interface MessageScrollerProps extends ComponentPropsWithRef<"div"> {
+  /** Choose whether the transcript or the document owns vertical scrolling. */
+  scrollMode?: "contained" | "page";
   /** Keep streamed output pinned while the reader remains near the end. */
   followOutput?: boolean;
   /** Distance from the end that still counts as following the output. */
@@ -105,6 +108,7 @@ export interface MessageScrollerProps extends ComponentPropsWithRef<"div"> {
 }
 
 export function MessageScroller({
+  scrollMode = "contained",
   followOutput = true,
   followThreshold = 56,
   smooth = true,
@@ -145,17 +149,7 @@ export function MessageScroller({
     ...restViewportProps
   } = viewportProps ?? {};
 
-  const setViewportRef = useCallback(
-    (node: HTMLElement | null) => {
-      viewportRef.current = node;
-      if (typeof externalViewportRef === "function") {
-        externalViewportRef(node);
-      } else if (externalViewportRef) {
-        externalViewportRef.current = node;
-      }
-    },
-    [externalViewportRef],
-  );
+  useImperativeHandle(externalViewportRef, () => viewportRef.current!);
 
   const setFollowing = useCallback(
     (next: boolean) => {
@@ -269,6 +263,15 @@ export function MessageScroller({
   }, [navigation, syncRailItems, updateActiveRailItem]);
 
   const scrollToEnd = useCallback((behavior: ScrollBehavior) => {
+    if (scrollMode === "page") {
+      const scrollingElement = document.scrollingElement;
+      window.scrollTo({
+        top: scrollingElement?.scrollHeight ?? document.documentElement.scrollHeight,
+        behavior,
+      });
+      return;
+    }
+
     const viewport = viewportRef.current;
     if (!viewport) return;
 
@@ -282,17 +285,30 @@ export function MessageScroller({
     scrollTimerRef.current = window.setTimeout(() => {
       programmaticScrollRef.current = false;
     }, behavior === "smooth" ? 320 : 0);
-  }, []);
+  }, [scrollMode]);
 
   const handleScroll = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport || programmaticScrollRef.current) return;
+    if (programmaticScrollRef.current) return;
 
+    if (scrollMode === "page") {
+      const scrollingElement = document.scrollingElement;
+      if (!scrollingElement) return;
+
+      const distance =
+        scrollingElement.scrollHeight -
+        scrollingElement.scrollTop -
+        window.innerHeight;
+      setFollowing(distance <= followThreshold);
+      return;
+    }
+
+    const viewport = viewportRef.current;
+    if (!viewport) return;
     const distance =
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
     setFollowing(distance <= followThreshold);
     updateActiveRailItem();
-  }, [followThreshold, setFollowing, updateActiveRailItem]);
+  }, [followThreshold, scrollMode, setFollowing, updateActiveRailItem]);
 
   const leaveLiveEdge = useCallback(() => {
     programmaticScrollRef.current = false;
@@ -323,10 +339,19 @@ export function MessageScroller({
   }, [followOutput, reduce, scheduleRailSync, scrollToEnd, smooth]);
 
   useEffect(() => {
+    if (scrollMode !== "page") return;
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [handleScroll, scrollMode]);
+
+  useEffect(() => {
     if (navigation !== "rail") {
       railTargetsRef.current.clear();
-      setRailItems([]);
-      setRailOverflowing(false);
       return;
     }
 
@@ -407,7 +432,7 @@ export function MessageScroller({
 
   const viewport = (
     <section
-      ref={setViewportRef}
+      ref={viewportRef}
       aria-label={label}
       {...restViewportProps}
       onScroll={(event) => {
@@ -429,10 +454,13 @@ export function MessageScroller({
         onViewportKeyDown?.(event);
       }}
       className={cn(
-        "h-full overflow-y-auto overscroll-contain outline-none [overflow-anchor:none] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        navigation === "rail"
-          ? "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          : "[scrollbar-gutter:stable]",
+        scrollMode === "page"
+          ? "h-auto overflow-visible [overflow-anchor:none]"
+          : "h-full overflow-y-auto overscroll-contain outline-none [overflow-anchor:none] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+        scrollMode === "contained" &&
+          (navigation === "rail"
+            ? "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            : "[scrollbar-gutter:stable]"),
         viewportClassName,
         navigation === "rail" && railOverflowing && "pr-10",
       )}
