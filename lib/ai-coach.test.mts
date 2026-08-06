@@ -55,7 +55,7 @@ test("states unavailable personalization signals in the system context", () => {
   });
 
   assert.match(prompt, /Quiz history and scores are not stored yet/);
-  assert.match(prompt, /only filenames and saved notes are available/);
+  assert.match(prompt, /only when ATTACHED_PDF_TEXT is present/);
   assert.match(prompt, /notes\.pdf/);
   assert.match(prompt, /fenced code block labeled quiz/);
   assert.match(prompt, /Do not put the answer key/);

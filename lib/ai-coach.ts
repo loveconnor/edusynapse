@@ -16,11 +16,27 @@ const UUID_PATTERN =
 
 export type CoachLearningItem = LearningItemSummary & {
   notes: string | null;
+  goal?: string | null;
+  status?: string | null;
+  target_outcome?: string | null;
+  mastery_label?: string | null;
+  recommendation_title?: string | null;
+  recommendation_reason?: string | null;
 };
 
 export type CoachMaterial = {
   file_name: string;
   learning_item_id: string;
+};
+
+export type CoachLearningTopic = {
+  title: string;
+  objective: string;
+  learning_question: string;
+  status: string;
+  mastery_label: string;
+  module_id: string;
+  position: number;
 };
 
 export type CoachProfile = {
@@ -143,11 +159,15 @@ export function buildCoachSystemPrompt({
   items,
   materials,
   currentDate,
+  currentLearningPathId = null,
+  currentLearningTopics = [],
 }: {
   profile: CoachProfile;
   items: CoachLearningItem[];
   materials: CoachMaterial[];
   currentDate: string;
+  currentLearningPathId?: string | null;
+  currentLearningTopics?: CoachLearningTopic[];
 }) {
   const materialNamesByItem = new Map<string, string[]>();
   for (const material of materials) {
@@ -164,17 +184,30 @@ export function buildCoachSystemPrompt({
       dailyStudyTime: profile.daily_study_time,
     },
     learningItems: items.map((item) => ({
+      id: item.id,
       title: item.title,
       progressPercent: item.progress,
       currentLesson: item.current_lesson,
       lastStudiedAt: item.last_studied_at,
       notes: truncateContext(item.notes, 3_000),
+      goal: item.goal,
+      status: item.status,
+      targetOutcome: item.target_outcome,
+      mastery: item.mastery_label,
+      recommendation: item.recommendation_title
+        ? {
+            title: item.recommendation_title,
+            reason: item.recommendation_reason,
+          }
+        : null,
       uploadedMaterialNames: materialNamesByItem.get(item.id) ?? [],
     })),
+    currentLearningPathId,
+    currentLearningTopics,
     unavailableSignals: [
       "Quiz history and scores are not stored yet.",
-      "Weak-topic signals are not stored yet.",
-      "Uploaded file contents are not extracted yet; only filenames and saved notes are available.",
+      "Use topic mastery and status as the available weak-topic signals; do not invent answer-level history.",
+      "Uploaded file text is available only when ATTACHED_PDF_TEXT is present in the current request.",
     ],
   };
 
@@ -184,6 +217,7 @@ export function buildCoachSystemPrompt({
     "FOLLOW THE LEARNER’S INTENT",
     "Respond to the request they actually made. Answer a simple factual or logistical question directly; do not turn every exchange into a lesson or quiz. When a missing detail would materially change the help, ask one focused question. Otherwise begin with the most useful answer and state any important assumption.",
     "Use the learner context for relevant examples, pacing, plans, and next steps before giving generic advice. Prefer evidence from the current conversation over profile assumptions. Adapt to a new time constraint for that request.",
+    "When currentLearningPathId is present, treat that matching learning item as the active path. Keep explanations, quizzes, and recommendations scoped to it unless the learner asks to compare or switch paths.",
     "TEACH FOR UNDERSTANDING",
     "First identify the learning target and the learner’s demonstrated prior knowledge. Connect new material to something they already know, but correct inaccurate prior knowledge explicitly.",
     "Give the central idea or answer before supporting detail. Break complex material into meaningful steps; define necessary terms in plain language; show why each step follows; and keep prerequisite information near the step that uses it.",

@@ -90,10 +90,14 @@ export function AiCoachChat({
   conversationId,
   firstName,
   initialMessages,
+  learningPathId,
+  pathTitle,
 }: {
   conversationId: string;
   firstName: string;
   initialMessages: InitialCoachMessage[];
+  learningPathId?: string;
+  pathTitle?: string;
 }) {
   const abortRef = useRef<AbortController | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
@@ -206,6 +210,7 @@ export function AiCoachChat({
       const formData = new FormData();
       formData.set("message", requestPrompt);
       formData.set("conversationId", conversationId);
+      if (learningPathId) formData.set("learningPathId", learningPathId);
       for (const attachment of submittedAttachments) {
         formData.append("files", attachment.file, attachment.file.name);
       }
@@ -313,10 +318,12 @@ export function AiCoachChat({
             id="ai-coach-title"
             className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl"
           >
-            AI Coach
+            {pathTitle ? `${pathTitle} Tutor` : "AI Coach"}
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Hi {firstName}. What are we working on?
+            {pathTitle
+              ? `Hi ${firstName}. Ask about this path, your current topic, or your source materials.`
+              : `Hi ${firstName}. What are we working on?`}
           </p>
         </header>
 

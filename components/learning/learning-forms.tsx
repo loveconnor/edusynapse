@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   attachLearningMaterials,
-  createLearningItem,
+  updateLearningPath,
   updateLearningItem,
 } from "@/app/learning/actions";
 import { Button } from "@/components/ui/button";
@@ -68,110 +68,6 @@ function AttachSubmitButton({ disabled }: { disabled: boolean }) {
 
 const textareaClassName =
   "min-h-32 w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm leading-6 outline-none transition-shadow placeholder:text-muted-foreground/64 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/24 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/16";
-
-export function NewLearningForm({
-  defaultTitle = "",
-  onCancel,
-}: {
-  defaultTitle?: string;
-  onCancel?: () => void;
-}) {
-  const [state, action] = useActionState(
-    createLearningItem,
-    initialLearningActionState,
-  );
-
-  return (
-    <form action={action} className="space-y-8">
-      <FormMessage message={state.message} />
-
-      <div className="space-y-2">
-        <Label htmlFor="new-learning-title">Topic or course title</Label>
-        <Input
-          id="new-learning-title"
-          name="title"
-          required
-          maxLength={200}
-          size="lg"
-          autoComplete="off"
-          defaultValue={defaultTitle}
-          placeholder="For example, React Fundamentals"
-          aria-invalid={Boolean(state.fieldErrors?.title)}
-          aria-describedby={state.fieldErrors?.title ? "title-error" : undefined}
-        />
-        <FieldError id="title-error" message={state.fieldErrors?.title} />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="new-learning-current-lesson">
-          Current lesson (optional)
-        </Label>
-        <Input
-          id="new-learning-current-lesson"
-          name="currentLesson"
-          maxLength={200}
-          size="lg"
-          autoComplete="off"
-          placeholder="For example, Components"
-          aria-invalid={Boolean(state.fieldErrors?.currentLesson)}
-          aria-describedby={
-            state.fieldErrors?.currentLesson ? "current-lesson-error" : undefined
-          }
-        />
-        <FieldError
-          id="current-lesson-error"
-          message={state.fieldErrors?.currentLesson}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="new-learning-notes">Notes (optional)</Label>
-        <textarea
-          id="new-learning-notes"
-          name="notes"
-          maxLength={10000}
-          className={textareaClassName}
-          placeholder="Add an outline, goals, or anything you want to remember."
-          aria-invalid={Boolean(state.fieldErrors?.notes)}
-          aria-describedby={state.fieldErrors?.notes ? "notes-error" : undefined}
-        />
-        <FieldError id="notes-error" message={state.fieldErrors?.notes} />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="new-learning-files">PDFs (optional)</Label>
-        <Input
-          id="new-learning-files"
-          name="files"
-          type="file"
-          accept="application/pdf,.pdf"
-          multiple
-          size="lg"
-          aria-invalid={Boolean(state.fieldErrors?.files)}
-          aria-describedby={
-            state.fieldErrors?.files ? "files-help files-error" : "files-help"
-          }
-        />
-        <p id="files-help" className="text-sm leading-6 text-muted-foreground">
-          Attach up to 12 PDFs. Each file can be up to 50 MB.
-        </p>
-        <FieldError id="files-error" message={state.fieldErrors?.files} />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-6">
-        <SubmitButton>Create learning item</SubmitButton>
-        {onCancel ? (
-          <Button type="button" variant="outline" size="lg" onClick={onCancel}>
-            Cancel
-          </Button>
-        ) : null}
-        <p className="text-sm text-muted-foreground">
-          New items start at 0% until you update your progress.
-        </p>
-      </div>
-    </form>
-  );
-}
 
 export function UpdateLearningForm({
   item,
@@ -274,6 +170,107 @@ export function UpdateLearningForm({
       </div>
 
       <SubmitButton>Save progress</SubmitButton>
+    </form>
+  );
+}
+
+export function UpdatePathSettingsForm({
+  path,
+}: {
+  path: {
+    id: string;
+    title: string;
+    goal: string;
+    startingLevel: string;
+    targetOutcome: string;
+    targetDate: string | null;
+  };
+}) {
+  const [state, action] = useActionState(
+    updateLearningPath,
+    initialLearningActionState,
+  );
+
+  return (
+    <form action={action} className="mt-6 space-y-6">
+      <input type="hidden" name="itemId" value={path.id} />
+      <FormMessage message={state.message} />
+      <div className="space-y-2">
+        <Label htmlFor="path-settings-title">Path title</Label>
+        <Input
+          id="path-settings-title"
+          name="title"
+          required
+          maxLength={200}
+          size="lg"
+          defaultValue={path.title}
+          aria-invalid={Boolean(state.fieldErrors?.title)}
+          aria-describedby={state.fieldErrors?.title ? "path-settings-title-error" : undefined}
+        />
+        <FieldError id="path-settings-title-error" message={state.fieldErrors?.title} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="path-settings-goal">Goal</Label>
+        <textarea
+          id="path-settings-goal"
+          name="goal"
+          required
+          maxLength={1000}
+          defaultValue={path.goal}
+          className={textareaClassName}
+          aria-invalid={Boolean(state.fieldErrors?.goal)}
+          aria-describedby={state.fieldErrors?.goal ? "path-settings-goal-error" : undefined}
+        />
+        <FieldError id="path-settings-goal-error" message={state.fieldErrors?.goal} />
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="path-settings-level">Current level</Label>
+          <select
+            id="path-settings-level"
+            name="startingLevel"
+            defaultValue={path.startingLevel}
+            className="min-h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/24"
+          >
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+            <option value="unsure">Not sure</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="path-settings-date">Target date</Label>
+          <Input
+            id="path-settings-date"
+            name="targetDate"
+            type="date"
+            size="lg"
+            defaultValue={path.targetDate ?? ""}
+            aria-invalid={Boolean(state.fieldErrors?.targetDate)}
+            aria-describedby={state.fieldErrors?.targetDate ? "path-settings-date-error" : undefined}
+          />
+          <FieldError id="path-settings-date-error" message={state.fieldErrors?.targetDate} />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="path-settings-outcome">Target outcome</Label>
+        <textarea
+          id="path-settings-outcome"
+          name="targetOutcome"
+          maxLength={1000}
+          defaultValue={path.targetOutcome}
+          className={textareaClassName}
+          aria-invalid={Boolean(state.fieldErrors?.targetOutcome)}
+          aria-describedby={state.fieldErrors?.targetOutcome ? "path-settings-outcome-error" : undefined}
+        />
+        <FieldError id="path-settings-outcome-error" message={state.fieldErrors?.targetOutcome} />
+      </div>
+      <div>
+        <SubmitButton>Save path settings</SubmitButton>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          Saving does not rewrite existing topics. Regenerate the path when the new goal should change its structure.
+        </p>
+      </div>
     </form>
   );
 }

@@ -94,7 +94,7 @@ function activityTimeLabel(value: string) {
 function lastStudiedLabel(value: string | null, now: Date) {
   return value
     ? `Last studied ${relativeDayLabel(value, now).toLowerCase()}`
-    : "New topic";
+    : "New path";
 }
 
 function recommendedMinutes(dailyStudyTime: string | null) {
@@ -130,14 +130,14 @@ function learningStatusLabel(item: LearningItemSummary) {
   const status = getLearningStatus(item.progress);
   if (status === "completed") return "Completed";
   if (status === "in-progress") return "In progress";
-  return "New topic";
+  return "New path";
 }
 
 function learningActionLabel(item: LearningItemSummary) {
   const status = getLearningStatus(item.progress);
   if (status === "completed") return "Review";
   if (status === "in-progress") return "Continue";
-  return "Start topic";
+  return "Start path";
 }
 
 function createRecentActivity(
@@ -301,7 +301,7 @@ function TodayPlan({
       </ol>
 
       <p className="mt-6 border-t pt-4 text-xs leading-5 text-muted-foreground">
-        Based on your current topic
+        Based on your current path
         {sessionMinutes ? " and saved study time" : ""}.
       </p>
     </aside>
@@ -382,16 +382,16 @@ function NewLearnerState() {
         <BookOpen aria-hidden="true" />
       </EmptyMedia>
       <EmptyHeader>
-        <EmptyTitle>Start your first learning topic</EmptyTitle>
+        <EmptyTitle>Build your first learning path</EmptyTitle>
         <EmptyDescription>
-          Add a topic, notes, or a PDF. EduSynapse will keep your next step in
-          one place.
+          Start with a goal or source PDFs. EduSynapse will organize the topics,
+          activities, and most useful next step.
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Button asChild size="xl">
           <Link href="/learning/new">
-            Add learning
+            Build a learning path
             <ArrowRight aria-hidden="true" />
           </Link>
         </Button>
@@ -450,7 +450,7 @@ export function MyLearningDashboard({
         <Button asChild size="lg" variant="outline">
           <Link href="/learning/new">
             <Plus aria-hidden="true" />
-            Add learning
+            Build a path
           </Link>
         </Button>
       </header>
@@ -479,10 +479,10 @@ export function MyLearningDashboard({
               >
                 <p className="text-sm font-semibold text-muted-foreground">What’s next</p>
                 <h2 id="continue-learning-title" className="mt-3 text-2xl font-semibold tracking-tight">
-                  Choose your next topic
+                  Choose your next learning goal
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-                  Your current topics are complete. Add something new or revisit a completed path.
+                  Your current paths are complete. Start a new goal or revisit a completed path.
                 </p>
                 <Button
                   asChild
@@ -490,7 +490,7 @@ export function MyLearningDashboard({
                   size="lg"
                 >
                   <Link href="/learning/new">
-                    Add your next topic
+                    Build your next path
                     <ArrowRight aria-hidden="true" />
                   </Link>
                 </Button>
@@ -504,7 +504,7 @@ export function MyLearningDashboard({
                     Your learning
                   </h2>
                   <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                    Keep your other topics within reach.
+                    Keep your other paths within reach.
                   </p>
                 </div>
                 <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -573,7 +573,7 @@ export function MyLearningDashboard({
                     description="Create a new path"
                     href="/learning/new"
                     icon={<Plus aria-hidden="true" className="size-4" />}
-                    title="Add a topic"
+                    title="Build a path"
                   />
                   <QuickAction
                     description={`Add to ${materialTarget.title}`}

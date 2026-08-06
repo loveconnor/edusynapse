@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { NewLearningRouteDialog } from "@/components/learning/new-learning-route-dialog";
 
 export const metadata: Metadata = {
-  title: "Add learning | EduSynapse",
-  description: "Create a learning topic from your notes and PDFs.",
+  title: "Build a learning path | EduSynapse",
+  description: "Create an adaptive learning path from a goal and source materials.",
 };
 
 export default async function NewLearningPage({

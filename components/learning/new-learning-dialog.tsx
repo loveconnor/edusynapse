@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { NewLearningForm } from "@/components/learning/learning-forms";
+import { LearningPathBuilder } from "@/components/learning/learning-path-builder";
 
 export type NewLearningDialogFocus = "title" | "files";
 
@@ -30,25 +30,23 @@ export function NewLearningDialog({
     >
       <DialogContent
         initialFocus={() =>
-          document.getElementById(
-            initialFocus === "files" ? "new-learning-files" : "new-learning-title",
+          document.querySelector<HTMLTextAreaElement>(
+            '[aria-label="What would you like to learn or prepare for?"]',
           )
         }
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-h-[calc(100dvh-3rem)]"
+        className="flex h-[calc(100dvh-2rem)] max-w-4xl flex-col overflow-hidden sm:h-[min(46rem,calc(100dvh-3rem))]"
       >
-        <DialogHeader>
-          <DialogTitle>Add learning</DialogTitle>
+        <DialogHeader className="shrink-0">
+          <DialogTitle>Create a learning path</DialogTitle>
           <DialogDescription>
-            Create a topic from your notes, PDFs, or both. You can update its
-            progress after it’s created.
+            Tell me what you want to learn. I’ll use your goals, experience,
+            schedule, and materials to build a personalized path.
           </DialogDescription>
         </DialogHeader>
-        <div className="px-6 py-6">
-          <NewLearningForm
-            defaultTitle={defaultTitle}
-            onCancel={() => onOpenChange(false)}
-          />
-        </div>
+        <LearningPathBuilder
+          defaultTitle={defaultTitle}
+          initialIntent={initialFocus}
+        />
       </DialogContent>
     </Dialog>
   );

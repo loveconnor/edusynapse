@@ -13,7 +13,18 @@ export type LearningStatus = "not-started" | "in-progress" | "completed";
 export type LearningActionState = {
   message: string | null;
   fieldErrors?: Partial<
-    Record<"title" | "notes" | "currentLesson" | "progress" | "files", string>
+    Record<
+      | "title"
+      | "goal"
+      | "startingLevel"
+      | "targetOutcome"
+      | "targetDate"
+      | "notes"
+      | "currentLesson"
+      | "progress"
+      | "files",
+      string
+    >
   >;
 };
 

@@ -84,6 +84,45 @@ function validateLearningFields({
   return { fieldErrors, progress };
 }
 
+function validatePathCreationFields({
+  goal,
+  startingLevel,
+  targetDate,
+  targetOutcome,
+  title,
+}: {
+  goal: string;
+  startingLevel: string;
+  targetDate: string;
+  targetOutcome: string;
+  title: string;
+}) {
+  const fieldErrors: NonNullable<LearningActionState["fieldErrors"]> = {};
+  if ([...title].length < 1 || [...title].length > 200) {
+    fieldErrors.title = "Enter a topic between 1 and 200 characters.";
+  }
+  if ([...goal].length < 1 || [...goal].length > 1000) {
+    fieldErrors.goal = "Describe your goal in 1,000 characters or fewer.";
+  }
+  if (!["beginner", "intermediate", "advanced", "unsure"].includes(startingLevel)) {
+    fieldErrors.startingLevel = "Choose your current level.";
+  }
+  if ([...targetOutcome].length > 1000) {
+    fieldErrors.targetOutcome = "Keep the target outcome to 1,000 characters or fewer.";
+  }
+  if (targetDate) {
+    const parsed = new Date(`${targetDate}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate) || Number.isNaN(parsed.getTime())) {
+      fieldErrors.targetDate = "Enter a valid target date.";
+    } else if (parsed < today) {
+      fieldErrors.targetDate = "Choose today or a future date.";
+    }
+  }
+  return fieldErrors;
+}
+
 async function uploadPdfs({
   files,
   itemId,
@@ -143,14 +182,22 @@ export async function createLearningItem(
   if (!user) redirect("/login");
 
   const title = textValue(formData, "title");
+  const goal = textValue(formData, "goal");
+  const startingLevel = textValue(formData, "startingLevel");
+  const targetOutcome = textValue(formData, "targetOutcome");
+  const targetDate = textValue(formData, "targetDate");
   const notes = textValue(formData, "notes");
-  const currentLesson = textValue(formData, "currentLesson");
   const files = pdfFiles(formData);
-  const { fieldErrors } = validateLearningFields({
+  const fieldErrors = validatePathCreationFields({
     title,
-    notes,
-    currentLesson,
+    goal,
+    startingLevel,
+    targetOutcome,
+    targetDate,
   });
+  if ([...notes].length > 10000) {
+    fieldErrors.notes = "Keep notes to 10,000 characters or fewer.";
+  }
   const fileError = await validateFiles(files);
   if (fileError) fieldErrors.files = fileError;
 
@@ -172,8 +219,13 @@ export async function createLearningItem(
     id: itemId,
     user_id: user.id,
     title,
+    goal,
+    starting_level: startingLevel,
+    target_outcome: targetOutcome || goal,
+    target_date: targetDate || null,
     notes: notes || null,
-    current_lesson: currentLesson || null,
+    source_type: files.length > 0 ? "mixed" : "manual",
+    status: "generating",
     origin: "manual",
   });
 
@@ -263,6 +315,60 @@ export async function updateLearningItem(
   revalidatePath("/dashboard");
   revalidatePath(`/learning/${itemId}`);
   redirect(`/learning/${itemId}?updated=1`);
+}
+
+export async function updateLearningPath(
+  _previousState: LearningActionState,
+  formData: FormData,
+): Promise<LearningActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const itemId = textValue(formData, "itemId");
+  if (!UUID_PATTERN.test(itemId)) {
+    return { message: "We couldn’t identify this learning path. Return to My Learning and try again." };
+  }
+  const title = textValue(formData, "title");
+  const goal = textValue(formData, "goal");
+  const startingLevel = textValue(formData, "startingLevel");
+  const targetOutcome = textValue(formData, "targetOutcome");
+  const targetDate = textValue(formData, "targetDate");
+  const fieldErrors = validatePathCreationFields({
+    title,
+    goal,
+    startingLevel,
+    targetOutcome,
+    targetDate,
+  });
+  if (Object.keys(fieldErrors).length > 0) {
+    return { message: "Check the highlighted fields and try again.", fieldErrors };
+  }
+
+  const result = await supabase
+    .from("learning_items")
+    .update({
+      title,
+      goal,
+      starting_level: startingLevel,
+      target_outcome: targetOutcome || goal,
+      target_date: targetDate || null,
+    })
+    .eq("id", itemId)
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
+  if (result.error || !result.data) {
+    return {
+      message: "We couldn’t save these path settings. Your entries are still here—try again.",
+    };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/learning/${itemId}`);
+  redirect(`/learning/${itemId}?updated=1#settings`);
 }
 
 export async function attachLearningMaterials(

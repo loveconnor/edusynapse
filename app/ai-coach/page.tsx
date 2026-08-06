@@ -24,7 +24,7 @@ type SavedMessage = {
 export default async function AiCoachPage({
   searchParams,
 }: {
-  searchParams: Promise<{ chat?: string | string[] }>;
+  searchParams: Promise<{ chat?: string | string[]; path?: string | string[] }>;
 }) {
   const query = await searchParams;
   const { supabase, user, shellProps } = await getAppPageContext();
@@ -32,8 +32,17 @@ export default async function AiCoachPage({
     typeof query.chat === "string" && isValidCoachConversationId(query.chat)
       ? query.chat
       : null;
+  const requestedPathId =
+    typeof query.path === "string" && isValidCoachConversationId(query.path)
+      ? query.path
+      : null;
 
-  const [profileResult, latestConversationResult, requestedConversationResult] =
+  const [
+    profileResult,
+    latestConversationResult,
+    requestedConversationResult,
+    requestedPathResult,
+  ] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -55,12 +64,21 @@ export default async function AiCoachPage({
             .eq("user_id", user.id)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
+      requestedPathId
+        ? supabase
+            .from("learning_items")
+            .select("id, title")
+            .eq("id", requestedPathId)
+            .eq("user_id", user.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
   if (
     profileResult.error ||
     latestConversationResult.error ||
-    requestedConversationResult.error
+    requestedConversationResult.error ||
+    requestedPathResult.error
   ) {
     throw new Error("Unable to load AI Coach");
   }
@@ -85,7 +103,10 @@ export default async function AiCoachPage({
   }
 
   if (query.chat !== conversationId) {
-    redirect(`/ai-coach?chat=${conversationId}`);
+    const pathQuery = requestedPathResult.data?.id
+      ? `&path=${requestedPathResult.data.id}`
+      : "";
+    redirect(`/ai-coach?chat=${conversationId}${pathQuery}`);
   }
 
   const messagesResult = await supabase
@@ -114,6 +135,8 @@ export default async function AiCoachPage({
       conversationId={conversationId}
       firstName={getFirstName(savedName)}
       initialMessages={initialMessages}
+      learningPathId={requestedPathResult.data?.id}
+      pathTitle={requestedPathResult.data?.title}
     />
   );
 }

@@ -13,7 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button } from "@/components/motion/button";
+import { Button } from "@/components/ui/button";
 import {
   MorphPopover,
   MorphPopoverContent,
@@ -115,12 +115,17 @@ export function PromptInput({
     if (!textarea || !measurement || textarea.value !== currentValue) return;
 
     const lineHeight = 24;
+    const maxHeight = maxRows * lineHeight;
     const nextHeight = Math.min(
       Math.max(measurement.scrollHeight, minRows * lineHeight),
-      maxRows * lineHeight,
+      maxHeight,
     );
     const height = `${nextHeight}px`;
     if (textarea.style.height !== height) textarea.style.height = height;
+    const overflowY = measurement.scrollHeight > maxHeight ? "auto" : "hidden";
+    if (textarea.style.overflowY !== overflowY) {
+      textarea.style.overflowY = overflowY;
+    }
   }, [currentValue, maxRows, minRows]);
 
   useLayoutEffect(() => {
@@ -195,7 +200,7 @@ export function PromptInput({
         {...textareaProps}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={handleKeyDown}
-        className="scrollbar-hide block w-full resize-none overflow-y-auto bg-transparent px-2 pt-1.5 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/55"
+        className="scrollbar-hide block w-full resize-none overflow-y-hidden bg-transparent px-2 pt-1.5 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/55"
       />
 
       <div className="mt-1 flex min-h-8 items-center gap-1">

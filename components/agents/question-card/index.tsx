@@ -13,7 +13,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentDisclosure } from "@/components/agents/agent-disclosure";
 import { ActionSwapRollText } from "@/components/motion/action-swap-roll";
-import { Button } from "@/components/motion/button";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/motion/checkbox";
 import { Input } from "@/components/motion/input";
 import { RadioGroup, RadioGroupItem } from "@/components/motion/radio";

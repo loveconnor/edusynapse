@@ -12,6 +12,7 @@ import {
   MAX_COACH_ATTACHMENT_TEXT_LENGTH,
   MAX_COACH_MESSAGE_LENGTH,
   type CoachLearningItem,
+  type CoachLearningTopic,
   type CoachMaterial,
   type CoachProfile,
 } from "@/lib/ai-coach";
@@ -65,10 +66,13 @@ async function parseCoachRequest(request: Request) {
     const formData = await request.formData();
     const message = formData.get("message");
     const conversationId = formData.get("conversationId");
+    const learningPathId = formData.get("learningPathId");
     return {
       message: typeof message === "string" ? message : "",
       conversationId:
         typeof conversationId === "string" ? conversationId : "",
+      learningPathId:
+        typeof learningPathId === "string" ? learningPathId : "",
       files: formData.getAll("files").filter(isFile),
     };
   }
@@ -82,10 +86,15 @@ async function parseCoachRequest(request: Request) {
     typeof body === "object" && body !== null && "conversationId" in body
       ? (body as { conversationId?: unknown }).conversationId
       : null;
+  const learningPathId =
+    typeof body === "object" && body !== null && "learningPathId" in body
+      ? (body as { learningPathId?: unknown }).learningPathId
+      : null;
 
   return {
     message: typeof message === "string" ? message : "",
     conversationId: typeof conversationId === "string" ? conversationId : "",
+    learningPathId: typeof learningPathId === "string" ? learningPathId : "",
     files: [] as File[],
   };
 }
@@ -209,6 +218,7 @@ export async function POST(request: Request) {
 
   const prompt = incoming.message.trim();
   const conversationId = incoming.conversationId.trim();
+  const learningPathId = incoming.learningPathId.trim();
   if (!isValidCoachConversationId(conversationId)) {
     return errorResponse("Choose a valid AI Coach chat.", 400);
   }
@@ -260,11 +270,17 @@ export async function POST(request: Request) {
   const savedPrompt = attachmentNames.length
     ? `${requestText}\n\nAttached PDFs: ${attachmentNames.join(", ")}`
     : requestText;
-  const modelPrompt = attachmentContext
+  let modelPrompt = attachmentContext
     ? `${requestText}\n\n${attachmentContext}`
     : requestText;
 
-  const [profileResult, itemsResult, materialsResult, historyResult] =
+  const [
+    profileResult,
+    itemsResult,
+    materialsResult,
+    historyResult,
+    currentTopicsResult,
+  ] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -274,14 +290,14 @@ export async function POST(request: Request) {
       supabase
         .from("learning_items")
         .select(
-          "id, title, notes, progress, current_lesson, last_studied_at, created_at, updated_at",
+          "id, title, notes, goal, status, target_outcome, mastery_label, recommendation_title, recommendation_reason, progress, current_lesson, last_studied_at, created_at, updated_at",
         )
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
         .limit(20),
       supabase
         .from("learning_materials")
-        .select("learning_item_id, file_name")
+        .select("learning_item_id, file_name, storage_path, mime_type")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50),
@@ -292,13 +308,23 @@ export async function POST(request: Request) {
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: false })
         .limit(COACH_HISTORY_LIMIT),
+      learningPathId && isValidCoachConversationId(learningPathId)
+        ? supabase
+            .from("learning_topics")
+            .select(
+              "title, objective, learning_question, status, mastery_label, module_id, position",
+            )
+            .eq("learning_item_id", learningPathId)
+            .eq("user_id", user.id)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
   if (
     profileResult.error ||
     itemsResult.error ||
     materialsResult.error ||
-    historyResult.error
+    historyResult.error ||
+    currentTopicsResult.error
   ) {
     return errorResponse("Your coach context could not be loaded. Try again.", 500);
   }
@@ -311,6 +337,35 @@ export async function POST(request: Request) {
   };
   const items = (itemsResult.data ?? []) as CoachLearningItem[];
   const materials = (materialsResult.data ?? []) as CoachMaterial[];
+  const currentLearningTopics = (currentTopicsResult.data ?? []) as CoachLearningTopic[];
+  if (
+    learningPathId &&
+    (!isValidCoachConversationId(learningPathId) ||
+      !items.some((item) => item.id === learningPathId))
+  ) {
+    return errorResponse("This learning path could not be found.", 404);
+  }
+  if (learningPathId && !attachmentContext) {
+    const storedFiles: File[] = [];
+    for (const material of materialsResult.data ?? []) {
+      if (material.learning_item_id !== learningPathId || storedFiles.length >= 3) continue;
+      const download = await supabase.storage
+        .from("learning-materials")
+        .download(material.storage_path);
+      if (!download.data || download.error) continue;
+      storedFiles.push(
+        new File([download.data], material.file_name, { type: material.mime_type }),
+      );
+    }
+    if (storedFiles.length > 0) {
+      try {
+        const savedSourceContext = await buildAttachmentContext(storedFiles);
+        modelPrompt = `${requestText}\n\n${savedSourceContext}`;
+      } catch {
+        // The path structure remains available when a saved PDF cannot be read.
+      }
+    }
+  }
   const history = selectHistoryWithinBudget(
     [...(historyResult.data ?? [])] as StoredCoachMessage[],
   );
@@ -372,6 +427,8 @@ export async function POST(request: Request) {
               items,
               materials,
               currentDate: currentCoachDate(),
+              currentLearningPathId: learningPathId || null,
+              currentLearningTopics,
             }),
           },
           ...history,

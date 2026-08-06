@@ -135,6 +135,7 @@ export function AppSearch({ learningItems, materials }: AppSearchData) {
       defaultTitle?: string;
       initialFocus?: NewLearningDialogFocus;
     } = {}) => {
+      setOpen(false);
       setNewLearningDialog({ defaultTitle, initialFocus, open: true });
     },
     [],
@@ -181,8 +182,8 @@ export function AppSearch({ learningItems, materials }: AppSearchData) {
       const commands: CommandItem[] = [
         {
           id: "add-learning",
-          label: "Add Learning",
-          description: "Create a course, topic, or learning goal",
+          label: "Build Learning Path",
+          description: "Create a path from a goal or source materials",
           group: "Quick Actions",
           hint: "⌘N",
           keywords: ["new", "create", "course", "topic", "learn"],
@@ -227,7 +228,7 @@ export function AppSearch({ learningItems, materials }: AppSearchData) {
         {
           id: "upload-material",
           label: "Upload Material",
-          description: "Create a learning item and attach PDFs",
+          description: "Build a learning path from source PDFs",
           group: "Quick Actions",
           hint: "⌘U",
           keywords: ["pdf", "notes", "file", "document", "material"],
@@ -235,9 +236,9 @@ export function AppSearch({ learningItems, materials }: AppSearchData) {
           onSelect: () => openNewLearningDialog({ initialFocus: "files" }),
         },
         {
-          id: "create-learning-topic",
-          label: "Create Learning Topic",
-          description: "Start from a title, notes, or PDFs",
+          id: "create-learning-path",
+          label: "Create Learning Path",
+          description: "Start from a goal, context, or PDFs",
           group: "Quick Actions",
           keywords: ["new", "add", "learn", "course", "subject"],
           icon: BookPlus,

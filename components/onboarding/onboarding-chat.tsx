@@ -1,18 +1,17 @@
 "use client";
 
 import { Paperclip, RotateCcw, X } from "love-ui/icons";
-import { useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { QuestionCard } from "@/components/agents/question-card";
+import { useMemo, useRef, useState } from "react";
 import {
-  MessageBubble,
-  MessageBubbleContent,
-} from "@/components/agents/message-bubble";
+  GuidedAssistantMessage,
+  GuidedStreamingMessage,
+  GuidedUserMessage,
+  useGuidedTextStream,
+} from "@/components/agents/guided-setup";
+import { QuestionCard } from "@/components/agents/question-card";
 import { MessageScroller } from "@/components/agents/message-scroller";
 import { PromptInput } from "@/components/agents/prompt-input";
-import { StreamingResponse } from "@/components/agents/streaming-response";
-import { ReasoningText } from "@/components/agents/loading-states/reasoning-text";
 import { Button } from "@/components/motion/button";
 import { SlideActionButton } from "@/components/motion/slide-action-button";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
@@ -124,89 +123,10 @@ function getQuestion(step: OnboardingStep, answers: OnboardingAnswers) {
   return "Everyone learns differently. EduSynapse will use what you’ve shared to personalize explanations, practice, and study plans around your goals, available time, and learning materials.";
 }
 
-function useLocalTextStream(text: string, streamKey: string) {
-  const reduceMotion = useReducedMotion() ?? false;
-  const [streamState, setStreamState] = useState<{
-    key: string;
-    visibleText: string;
-    phase: "preparing" | "streaming" | "complete";
-  }>(() => ({
-    key: streamKey,
-    visibleText: reduceMotion ? text : "",
-    phase: reduceMotion ? "complete" : "preparing",
-  }));
-
-  useEffect(() => {
-    let interval: number | undefined;
-    if (reduceMotion) return;
-
-    const timer = window.setTimeout(() => {
-      const tokens = text.match(/\S+\s*/g) ?? [text];
-      let tokenIndex = 0;
-      setStreamState({ key: streamKey, visibleText: "", phase: "streaming" });
-      interval = window.setInterval(() => {
-        tokenIndex += 1;
-        const streamComplete = tokenIndex >= tokens.length;
-        setStreamState({
-          key: streamKey,
-          visibleText: tokens.slice(0, tokenIndex).join(""),
-          phase: streamComplete ? "complete" : "streaming",
-        });
-        if (tokenIndex >= tokens.length) {
-          if (interval) window.clearInterval(interval);
-        }
-      }, 45);
-    }, 380);
-
-    return () => {
-      if (timer) window.clearTimeout(timer);
-      if (interval) window.clearInterval(interval);
-    };
-  }, [reduceMotion, streamKey, text]);
-
-  const currentState =
-    reduceMotion
-      ? { visibleText: text, phase: "complete" as const }
-      : streamState.key === streamKey
-        ? streamState
-        : { visibleText: "", phase: "preparing" as const };
-
-  return {
-    visibleText: currentState.visibleText,
-    preparing: currentState.phase === "preparing",
-    streaming: currentState.phase !== "complete",
-    complete: currentState.phase === "complete",
-  };
-}
-
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function AssistantMessage({ content }: { content: string }) {
-  return (
-    <div data-slot="message" data-from="assistant">
-      <MessageBubble variant="ghost" align="start">
-        <MessageBubbleContent className="max-w-2xl whitespace-pre-wrap text-base leading-7">
-          {content}
-        </MessageBubbleContent>
-      </MessageBubble>
-    </div>
-  );
-}
-
-function UserMessage({ content }: { content: string }) {
-  return (
-    <div data-slot="message" data-from="user">
-      <MessageBubble variant="soft" align="end" animateIn>
-        <MessageBubbleContent className="whitespace-pre-wrap text-[15px]">
-          {content}
-        </MessageBubbleContent>
-      </MessageBubble>
-    </div>
-  );
 }
 
 export function OnboardingChat() {
@@ -224,7 +144,7 @@ export function OnboardingChat() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const question = useMemo(() => getQuestion(step, answers), [answers, step]);
-  const stream = useLocalTextStream(question, `${runId}:${step}`);
+  const stream = useGuidedTextStream(question, `${runId}:${step}`);
   const stepIndex = STEP_ORDER.indexOf(step);
   const stepNumber = stepIndex + 1;
   const progress = (stepNumber / STEP_ORDER.length) * 100;
@@ -491,38 +411,14 @@ export function OnboardingChat() {
         >
           {messages.map((message) =>
             message.from === "assistant" ? (
-              <AssistantMessage key={message.id} content={message.content} />
+              <GuidedAssistantMessage key={message.id} content={message.content} />
             ) : (
-              <UserMessage key={message.id} content={message.content} />
+              <GuidedUserMessage key={message.id} content={message.content} />
             ),
           )}
 
           <div data-slot="message" data-from="assistant" id={`onboarding-question-${step}`}>
-            {stream.preparing ? (
-              <ReasoningText
-                phrases={["Preparing the next question"]}
-                variant="swap"
-              />
-            ) : (
-              <MessageBubble variant="ghost" align="start" animateIn>
-                <MessageBubbleContent className="max-w-2xl">
-                  <StreamingResponse
-                    status={stream.streaming ? "streaming" : "complete"}
-                    announce={false}
-                    showActions={false}
-                    contentClassName="whitespace-pre-wrap text-base leading-7"
-                  >
-                    {stream.visibleText}
-                    {stream.streaming ? (
-                      <span
-                        aria-hidden="true"
-                        className="ms-1 inline-block h-4 w-0.5 translate-y-0.5 bg-foreground animate-pulse motion-reduce:animate-none"
-                      />
-                    ) : null}
-                  </StreamingResponse>
-                </MessageBubbleContent>
-              </MessageBubble>
-            )}
+            <GuidedStreamingMessage {...stream} />
           </div>
         </MessageScroller>
 
